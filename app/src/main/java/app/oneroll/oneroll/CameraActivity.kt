@@ -28,6 +28,8 @@ import app.oneroll.oneroll.databinding.ActivityCameraBinding
 import app.oneroll.oneroll.model.OneRollConfig
 import app.oneroll.oneroll.storage.ConfigStorage
 import app.oneroll.oneroll.storage.PhotoRepository
+import app.oneroll.oneroll.upload.WebDavUploader
+import java.io.File
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
@@ -41,6 +43,7 @@ class CameraActivity : AppCompatActivity() {
     private var camera: Camera? = null
     private val configStorage by lazy { ConfigStorage(this) }
     private val photoRepository by lazy { PhotoRepository(this) }
+    private val webDavUploader by lazy { WebDavUploader(this) }
     private var config: OneRollConfig? = null
     private var orientationListener: OrientationEventListener? = null
 
@@ -84,6 +87,7 @@ class CameraActivity : AppCompatActivity() {
     override fun onDestroy() {
         super.onDestroy()
         cameraExecutor.shutdown()
+        webDavUploader.shutdown()
     }
 
     override fun onResume() {
@@ -212,6 +216,7 @@ class CameraActivity : AppCompatActivity() {
                 }
 
                 override fun onImageSaved(outputFileResults: ImageCapture.OutputFileResults) {
+                    uploadPhoto(outputFile)
                     runOnUiThread { refreshGallery() }
                 }
             }
@@ -295,5 +300,19 @@ class CameraActivity : AppCompatActivity() {
         val desc = if (isFlashOn) R.string.flash_on else R.string.flash_off
         binding.flashToggle.setIconResource(icon)
         binding.flashToggle.contentDescription = getString(desc)
+    }
+
+    private fun uploadPhoto(file: File) {
+        val cfg = config ?: return
+        webDavUploader.uploadPhoto(file, cfg) { result ->
+            result.onFailure { error ->
+                Log.e("CameraActivity", "WebDAV upload failed", error)
+                Toast.makeText(
+                    this,
+                    getString(R.string.upload_failed, error.localizedMessage ?: error.toString()),
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+        }
     }
 }
