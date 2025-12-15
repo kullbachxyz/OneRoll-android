@@ -43,10 +43,11 @@ class WebDavDownloader(context: Context) {
     fun syncOccasionPhotos(
         config: OneRollConfig,
         repository: OccasionPhotoRepository,
+        onProgress: (() -> Unit)? = null,
         onComplete: (Result<Int>) -> Unit
     ) {
         executor.execute {
-            val result = runCatching { syncOccasionBlocking(config, repository) }
+            val result = runCatching { syncOccasionBlocking(config, repository, onProgress) }
             callbackHandler.post { onComplete(result) }
         }
     }
@@ -74,7 +75,8 @@ class WebDavDownloader(context: Context) {
 
     private fun syncOccasionBlocking(
         config: OneRollConfig,
-        repository: OccasionPhotoRepository
+        repository: OccasionPhotoRepository,
+        onProgress: (() -> Unit)?
     ): Int {
         val rootUrl = WebDavPaths.buildOccasionFolderUrl(config.webDav)
             ?: throw IllegalArgumentException("Invalid WebDAV base URL: ${config.webDav.baseURL}")
@@ -88,6 +90,7 @@ class WebDavDownloader(context: Context) {
                 if (repository.hasPhoto(folderName, name)) return@forEach
                 if (downloadPhoto(folderUrl, name, credential, repository, folderName)) {
                     downloaded++
+                    onProgress?.let { callbackHandler.post(it) }
                 }
             }
         }

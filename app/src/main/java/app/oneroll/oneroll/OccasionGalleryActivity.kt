@@ -65,11 +65,12 @@ class OccasionGalleryActivity : AppCompatActivity() {
 
     private fun fetchOccasionPhotos(cfg: OneRollConfig) {
         setLoading(true)
-        webDavDownloader.syncOccasionPhotos(cfg, occasionRepository) { result ->
+        webDavDownloader.syncOccasionPhotos(
+            config = cfg,
+            repository = occasionRepository,
+            onProgress = { refreshPhotos() }
+        ) { result ->
             setLoading(false)
-            result.onSuccess {
-                refreshPhotos()
-            }
             result.onFailure { error ->
                 Toast.makeText(
                     this,
