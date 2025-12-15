@@ -1,0 +1,26 @@
+<resources>
+    <string name="app_name">OneRoll</string>
+    <string name="scan_qr_instruction">Scan the OneRoll QR code to configure this device.</string>
+    <string name="cancel">Cancel</string>
+    <string name="config_saved">Configuration loaded</string>
+    <string name="config_error">Invalid configuration: %1$s</string>
+    <string name="camera_permission_rationale">Camera access is required to take photos.</string>
+    <string name="request_permission">Grant Camera</string>
+    <string name="switch_camera">Switch</string>
+    <string name="flash_on">Flash On</string>
+    <string name="flash_off">Flash Off</string>
+    <string name="settings">Settings</string>
+    <string name="wipe_photos">Wipe local photos</string>
+    <string name="clear_config">Clear configuration</string>
+    <string name="settings_title">OneRoll settings</string>
+    <string name="photos_cleared">Local photos cleared</string>
+    <string name="config_cleared">Configuration cleared</string>
+    <string name="max_reached">Maximum photos reached</string>
+    <string name="occasion_label">Occasion: %1$s</string>
+    <string name="photos_count_label">%1$d / %2$d</string>
+    <string name="qr_raw_json">QR payload:\n%1$s</string>
+    <string name="open_gallery">Gallery</string>
+    <string name="take_photo">Take</string>
+    <string name="prev">Prev</string>
+    <string name="next">Next</string>
+</resources>
