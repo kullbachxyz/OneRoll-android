@@ -9,6 +9,7 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updateLayoutParams
 import androidx.recyclerview.widget.GridLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import app.oneroll.oneroll.databinding.ActivityGalleryBinding
 import app.oneroll.oneroll.storage.PhotoRepository
 import app.oneroll.oneroll.ui.gallery.PhotoThumbnailAdapter
@@ -29,6 +30,10 @@ class PhotoGalleryActivity : AppCompatActivity() {
 
         binding.galleryList.layoutManager = GridLayoutManager(this, 3)
         binding.galleryList.adapter = adapter
+        if (binding.galleryList.itemDecorationCount == 0) {
+            val spacing = resources.getDimensionPixelSize(R.dimen.gallery_spacing)
+            binding.galleryList.addItemDecoration(GridSpacingDecoration(spacing))
+        }
         photos = photoRepository.listPhotos()
         adapter.submitList(photos)
 
@@ -69,6 +74,32 @@ class PhotoGalleryActivity : AppCompatActivity() {
                 bottomMargin = baseCloseBottom + systemInsets.bottom
             }
             insets
+        }
+    }
+
+    private class GridSpacingDecoration(
+        private val spacing: Int
+    ) : RecyclerView.ItemDecoration() {
+        override fun getItemOffsets(
+            outRect: android.graphics.Rect,
+            view: android.view.View,
+            parent: RecyclerView,
+            state: RecyclerView.State
+        ) {
+            val position = parent.getChildAdapterPosition(view)
+            if (position == RecyclerView.NO_POSITION) return
+            val layoutManager = parent.layoutManager as? GridLayoutManager
+            val spanCount = layoutManager?.spanCount ?: 1
+            val column = position % spanCount
+
+            outRect.left = spacing / 2
+            outRect.right = spacing / 2
+            outRect.bottom = spacing
+            outRect.top = if (position < spanCount) spacing else spacing / 2
+
+            // Adjust edges so total spacing stays even.
+            if (column == 0) outRect.left = spacing
+            if (column == spanCount - 1) outRect.right = spacing
         }
     }
 }
