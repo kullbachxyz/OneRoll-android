@@ -33,6 +33,7 @@ import androidx.core.view.updateLayoutParams
 import app.oneroll.oneroll.databinding.ActivityCameraBinding
 import app.oneroll.oneroll.model.OneRollConfig
 import app.oneroll.oneroll.storage.ConfigStorage
+import app.oneroll.oneroll.storage.OccasionPhotoRepository
 import app.oneroll.oneroll.storage.PhotoRepository
 import app.oneroll.oneroll.upload.WebDavDownloader
 import app.oneroll.oneroll.upload.WebDavUploader
@@ -50,6 +51,7 @@ class CameraActivity : AppCompatActivity() {
     private var camera: Camera? = null
     private val scaleGestureDetector by lazy { ScaleGestureDetector(this, ZoomGestureListener()) }
     private val configStorage by lazy { ConfigStorage(this) }
+    private val occasionPhotoRepository by lazy { OccasionPhotoRepository(this) }
     private val photoRepository by lazy { PhotoRepository(this) }
     private val webDavDownloader by lazy { WebDavDownloader(this) }
     private val webDavUploader by lazy { WebDavUploader(this) }
@@ -120,6 +122,7 @@ class CameraActivity : AppCompatActivity() {
     private fun initUi() {
         val cfg = config ?: return
         binding.occasionName.text = cfg.occasionName
+        binding.occasionName.setOnClickListener { openOccasionGallery() }
         binding.switchCamera.setOnClickListener {
             cameraSelector =
                 if (cameraSelector == CameraSelector.DEFAULT_BACK_CAMERA) CameraSelector.DEFAULT_FRONT_CAMERA else CameraSelector.DEFAULT_BACK_CAMERA
@@ -293,12 +296,14 @@ class CameraActivity : AppCompatActivity() {
             .setMessage(message.trim())
             .setPositiveButton(R.string.wipe_photos) { _, _ ->
                 photoRepository.clearPhotos()
+                occasionPhotoRepository.clear()
                 Toast.makeText(this, R.string.photos_cleared, Toast.LENGTH_SHORT).show()
                 refreshGallery()
             }
             .setNegativeButton(R.string.clear_config) { _, _ ->
                 configStorage.clearConfig()
                 photoRepository.clearPhotos()
+                occasionPhotoRepository.clear()
                 Toast.makeText(this, R.string.config_cleared, Toast.LENGTH_SHORT).show()
                 startActivity(Intent(this, QrScanActivity::class.java))
                 finish()
@@ -309,6 +314,10 @@ class CameraActivity : AppCompatActivity() {
 
     private fun openGallery() {
         startActivity(Intent(this, PhotoGalleryActivity::class.java))
+    }
+
+    private fun openOccasionGallery() {
+        startActivity(Intent(this, OccasionGalleryActivity::class.java))
     }
 
     private fun hideSystemBars() {

@@ -35,6 +35,9 @@
         <activity
             android:name=".PhotoPreviewActivity"
             android:exported="false" />
+        <activity
+            android:name=".OccasionGalleryActivity"
+            android:exported="false" />
     </application>
 
 </manifest>

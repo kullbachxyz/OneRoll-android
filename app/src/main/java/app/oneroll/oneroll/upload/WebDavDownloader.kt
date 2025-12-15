@@ -5,6 +5,7 @@ import android.os.Handler
 import android.os.Looper
 import android.util.Log
 import app.oneroll.oneroll.model.OneRollConfig
+import app.oneroll.oneroll.storage.OccasionPhotoRepository
 import app.oneroll.oneroll.storage.PhotoRepository
 import java.io.IOException
 import java.io.StringReader
@@ -39,6 +40,17 @@ class WebDavDownloader(context: Context) {
         }
     }
 
+    fun syncOccasionPhotos(
+        config: OneRollConfig,
+        repository: OccasionPhotoRepository,
+        onComplete: (Result<Int>) -> Unit
+    ) {
+        executor.execute {
+            val result = runCatching { syncOccasionBlocking(config, repository) }
+            callbackHandler.post { onComplete(result) }
+        }
+    }
+
     fun shutdown() {
         executor.shutdown()
     }
@@ -60,15 +72,48 @@ class WebDavDownloader(context: Context) {
         return downloaded
     }
 
+    private fun syncOccasionBlocking(
+        config: OneRollConfig,
+        repository: OccasionPhotoRepository
+    ): Int {
+        val rootUrl = WebDavPaths.buildOccasionFolderUrl(config.webDav)
+            ?: throw IllegalArgumentException("Invalid WebDAV base URL: ${config.webDav.baseURL}")
+        val credential = Credentials.basic(config.webDav.username, config.webDav.password)
+        val deviceFolders = listCollections(rootUrl, credential)
+        var downloaded = 0
+        deviceFolders.forEach { folderName ->
+            val folderUrl = rootUrl.newBuilder().addPathSegment(folderName).build()
+            val remotePhotos = listRemotePhotos(folderUrl, credential)
+            remotePhotos.forEach { name ->
+                if (repository.hasPhoto(folderName, name)) return@forEach
+                if (downloadPhoto(folderUrl, name, credential, repository, folderName)) {
+                    downloaded++
+                }
+            }
+        }
+        return downloaded
+    }
+
     private fun listRemotePhotos(folderUrl: HttpUrl, credential: String): List<String> {
+        return listEntries(folderUrl, credential)
+            .filter { !it.isCollection && it.name.endsWith(".jpg", true) }
+            .map { it.name }
+    }
+
+    private fun listCollections(folderUrl: HttpUrl, credential: String): List<String> {
+        return listEntries(folderUrl, credential)
+            .filter { it.isCollection }
+            .map { it.name }
+    }
+
+    private fun listEntries(folderUrl: HttpUrl, credential: String): List<PropfindEntry> {
         val targetUrl = folderUrl.withTrailingSlash()
-        // Try without body first for servers that reject XML bodies at Depth 1.
-        val attempts = listOf(
+        val requests = listOf(
             buildPropfindRequest(targetUrl, credential, includeBody = false),
             buildPropfindRequest(targetUrl, credential, includeBody = true)
         )
         var lastError: IOException? = null
-        attempts.forEach { request ->
+        requests.forEach { request ->
             try {
                 client.newCall(request).execute().use { response ->
                     if (response.code == 404) return emptyList()
@@ -87,7 +132,7 @@ class WebDavDownloader(context: Context) {
         return emptyList()
     }
 
-    private fun parsePropfind(xml: String): List<String> {
+    private fun parsePropfind(xml: String): List<PropfindEntry> {
         if (xml.isBlank()) return emptyList()
         val factory = DocumentBuilderFactory.newInstance().apply {
             isNamespaceAware = true
@@ -99,18 +144,17 @@ class WebDavDownloader(context: Context) {
         }
         val document = factory.newDocumentBuilder().parse(InputSource(StringReader(xml)))
         val responses = document.getElementsByTagNameNS("*", "response")
-        val names = mutableListOf<String>()
+        val entries = mutableListOf<PropfindEntry>()
         for (i in 0 until responses.length) {
             val element = responses.item(i) as? Element ?: continue
             val href = element.getElementsByTagNameNS("*", "href").item(0)?.textContent?.trim()
                 ?: continue
             val name = href.trimEnd('/').substringAfterLast('/')
             if (name.isBlank()) continue
-            if (element.getElementsByTagNameNS("*", "collection").length > 0) continue
-            if (!name.endsWith(".jpg", true)) continue
-            names += name
+            val isCollection = element.getElementsByTagNameNS("*", "collection").length > 0
+            entries += PropfindEntry(name = name, isCollection = isCollection)
         }
-        return names
+        return entries
     }
 
     private fun downloadPhoto(
@@ -132,6 +176,30 @@ class WebDavDownloader(context: Context) {
             }
             val body = response.body ?: return false
             repository.saveDownloadedPhoto(name, body.byteStream())
+            return true
+        }
+    }
+
+    private fun downloadPhoto(
+        folderUrl: HttpUrl,
+        name: String,
+        credential: String,
+        repository: OccasionPhotoRepository,
+        deviceFolder: String
+    ): Boolean {
+        val request = Request.Builder()
+            .url(folderUrl.newBuilder().addPathSegment(name).build())
+            .header(AUTHORIZATION_HEADER, credential)
+            .get()
+            .build()
+
+        client.newCall(request).execute().use { response ->
+            if (!response.isSuccessful) {
+                Log.w(TAG, "Skipping download for $deviceFolder/$name, HTTP ${response.code}")
+                return false
+            }
+            val body = response.body ?: return false
+            repository.saveDownloadedPhoto(deviceFolder, name, body.byteStream())
             return true
         }
     }
@@ -160,7 +228,7 @@ class WebDavDownloader(context: Context) {
         return Request.Builder()
             .url(folderUrl)
             .header(AUTHORIZATION_HEADER, credential)
-            .header("Depth", "1")
+            .header("Depth", "1") // Avoid Depth: infinity for compatibility.
             .method("PROPFIND", body)
             .build()
     }
@@ -185,3 +253,8 @@ class WebDavDownloader(context: Context) {
         """
     }
 }
+
+private data class PropfindEntry(
+    val name: String,
+    val isCollection: Boolean
+)

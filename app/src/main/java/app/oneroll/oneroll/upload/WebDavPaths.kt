@@ -13,11 +13,16 @@ object WebDavPaths {
     }
 
     fun buildDeviceFolderUrl(webDav: WebDavConfig, deviceId: String): HttpUrl? {
+        val builder = buildOccasionFolderUrl(webDav)?.newBuilder() ?: return null
+        builder.addPathSegment(deviceId)
+        return builder.build()
+    }
+
+    fun buildOccasionFolderUrl(webDav: WebDavConfig): HttpUrl? {
         val base = webDav.baseURL.toHttpUrlOrNull() ?: return null
         val cleanedSegments = webDav.path.trim('/').split('/').filter { it.isNotBlank() }
         val builder = base.newBuilder().encodedPath("/")
         cleanedSegments.forEach { segment -> builder.addPathSegment(segment) }
-        builder.addPathSegment(deviceId)
         return builder.build()
     }
 }
