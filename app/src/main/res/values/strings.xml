@@ -27,4 +27,8 @@
     <string name="gallery_empty">No photos found yet.</string>
     <string name="occasion_gallery_title">Occasion gallery \u2013 %1$s</string>
     <string name="occasion_gallery_error">Could not load occasion photos: %1$s</string>
+    <string name="download">Download</string>
+    <string name="download_success">Saved to Photos</string>
+    <string name="download_failed">Could not save photo: %1$s</string>
+    <string name="storage_permission_required">Storage permission is required to download photos</string>
 </resources>

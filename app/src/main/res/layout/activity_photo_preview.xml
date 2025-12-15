@@ -64,13 +64,13 @@
             app:strokeWidth="0dp" />
 
         <com.google.android.material.button.MaterialButton
-            android:id="@+id/close_button"
+            android:id="@+id/download_button"
             style="@style/Widget.MaterialComponents.Button"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginStart="16dp"
-            android:text="@string/cancel"
             android:textColor="@android:color/black"
+            android:text="@string/download"
             app:backgroundTint="@android:color/white" />
     </LinearLayout>
 
