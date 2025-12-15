@@ -36,6 +36,16 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
 
+    <View
+        android:id="@+id/focus_indicator"
+        android:layout_width="@dimen/focus_indicator_size"
+        android:layout_height="@dimen/focus_indicator_size"
+        android:background="@drawable/focus_indicator"
+        android:visibility="gone"
+        android:translationZ="2dp"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
+
     <LinearLayout
         android:id="@+id/top_left_container"
         android:layout_width="wrap_content"

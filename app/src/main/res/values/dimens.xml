@@ -2,4 +2,5 @@
 <resources>
     <dimen name="qr_status_bottom_padding">24dp</dimen>
     <dimen name="gallery_spacing">8dp</dimen>
+    <dimen name="focus_indicator_size">64dp</dimen>
 </resources>

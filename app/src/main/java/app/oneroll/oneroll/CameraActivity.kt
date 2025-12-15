@@ -11,6 +11,7 @@ import android.util.Log
 import android.view.Surface
 import android.view.OrientationEventListener
 import android.view.ScaleGestureDetector
+import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
@@ -19,6 +20,7 @@ import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.camera.core.Camera
 import androidx.camera.core.CameraSelector
+import androidx.camera.core.FocusMeteringAction
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCaptureException
 import androidx.camera.core.Preview
@@ -40,6 +42,7 @@ import app.oneroll.oneroll.upload.WebDavUploader
 import java.io.File
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 
 class CameraActivity : AppCompatActivity() {
 
@@ -134,6 +137,13 @@ class CameraActivity : AppCompatActivity() {
         binding.galleryButton.setOnClickListener { openGallery() }
         binding.previewView.setOnTouchListener { _, event ->
             scaleGestureDetector.onTouchEvent(event)
+            if (event.pointerCount > 1) {
+                return@setOnTouchListener true
+            }
+            when (event.action) {
+                MotionEvent.ACTION_DOWN -> showFocusIndicator(event.x, event.y)
+                MotionEvent.ACTION_UP -> focusOnPoint(event.x, event.y)
+            }
             true
         }
         updateFlashIcon(false)
@@ -342,6 +352,45 @@ class CameraActivity : AppCompatActivity() {
         val desc = if (isFlashOn) R.string.flash_on else R.string.flash_off
         binding.flashToggle.setIconResource(icon)
         binding.flashToggle.contentDescription = getString(desc)
+    }
+
+    private fun showFocusIndicator(x: Float, y: Float) {
+        val indicator = binding.focusIndicator
+        val indicatorSize = resources.getDimensionPixelSize(R.dimen.focus_indicator_size)
+        val offsetX = binding.previewView.x + x - indicatorSize / 2f
+        val offsetY = binding.previewView.y + y - indicatorSize / 2f
+
+        indicator.animate().cancel()
+        indicator.translationX = offsetX
+        indicator.translationY = offsetY
+        indicator.scaleX = 0.8f
+        indicator.scaleY = 0.8f
+        indicator.alpha = 0.2f
+        indicator.visibility = View.VISIBLE
+        indicator.animate()
+            .alpha(1f)
+            .scaleX(1f)
+            .scaleY(1f)
+            .setDuration(90)
+            .withEndAction {
+                indicator.animate()
+                    .alpha(0f)
+                    .setStartDelay(180)
+                    .setDuration(130)
+                    .withEndAction { indicator.visibility = View.GONE }
+                    .start()
+            }
+            .start()
+    }
+
+    private fun focusOnPoint(x: Float, y: Float) {
+        val currentCamera = camera ?: return
+        val factory = binding.previewView.meteringPointFactory
+        val point = factory.createPoint(x, y)
+        val action = FocusMeteringAction.Builder(point)
+            .setAutoCancelDuration(3, TimeUnit.SECONDS)
+            .build()
+        currentCamera.cameraControl.startFocusAndMetering(action)
     }
 
     private fun showCaptureOverlay(file: File) {
