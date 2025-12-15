@@ -3,11 +3,15 @@ package app.oneroll.oneroll
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.graphics.Matrix
 import android.os.Bundle
 import android.util.Log
 import android.view.Surface
 import android.view.OrientationEventListener
 import android.view.ScaleGestureDetector
+import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
@@ -19,6 +23,7 @@ import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCaptureException
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
+import androidx.exifinterface.media.ExifInterface
 import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
@@ -223,7 +228,11 @@ class CameraActivity : AppCompatActivity() {
 
                 override fun onImageSaved(outputFileResults: ImageCapture.OutputFileResults) {
                     uploadPhoto(outputFile)
-                    runOnUiThread { refreshGallery() }
+                    runOnUiThread {
+                        refreshGallery()
+                        showCaptureOverlay(outputFile)
+                        flashScreen()
+                    }
                 }
             }
         )
@@ -306,6 +315,97 @@ class CameraActivity : AppCompatActivity() {
         val desc = if (isFlashOn) R.string.flash_on else R.string.flash_off
         binding.flashToggle.setIconResource(icon)
         binding.flashToggle.contentDescription = getString(desc)
+    }
+
+    private fun showCaptureOverlay(file: File) {
+        val overlay = binding.captureOverlay
+        val targetWidth = overlay.width.takeIf { it > 0 } ?: binding.previewView.width
+        val targetHeight = overlay.height.takeIf { it > 0 } ?: binding.previewView.height
+        val bitmap = decodeScaledBitmap(file, targetWidth, targetHeight) ?: return
+
+        overlay.setImageBitmap(bitmap)
+        overlay.alpha = 1f
+        overlay.visibility = View.VISIBLE
+        overlay.animate()
+            .alpha(0f)
+            .setStartDelay(300)
+            .setDuration(250)
+            .withEndAction {
+                overlay.setImageDrawable(null)
+                overlay.visibility = View.GONE
+                overlay.alpha = 1f
+            }
+            .start()
+    }
+
+    private fun decodeScaledBitmap(file: File, targetWidth: Int, targetHeight: Int): Bitmap? {
+        if (targetWidth == 0 || targetHeight == 0) return decodeOrientedBitmap(file)
+        val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        BitmapFactory.decodeFile(file.absolutePath, options)
+        options.inSampleSize = calculateInSampleSize(options, targetWidth, targetHeight)
+        options.inJustDecodeBounds = false
+        val bitmap = BitmapFactory.decodeFile(file.absolutePath, options) ?: return null
+        val rotation = readRotationDegrees(file)
+        if (rotation == 0f) return bitmap
+        val matrix = Matrix().apply { postRotate(rotation) }
+        return Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
+    }
+
+    private fun calculateInSampleSize(
+        options: BitmapFactory.Options,
+        reqWidth: Int,
+        reqHeight: Int
+    ): Int {
+        val (height: Int, width: Int) = options.run { outHeight to outWidth }
+        var inSampleSize = 1
+        if (height > reqHeight || width > reqWidth) {
+            var halfHeight = height / 2
+            var halfWidth = width / 2
+            while (halfHeight / inSampleSize >= reqHeight && halfWidth / inSampleSize >= reqWidth) {
+                inSampleSize *= 2
+                halfHeight /= 2
+                halfWidth /= 2
+            }
+        }
+        return inSampleSize
+    }
+
+    private fun decodeOrientedBitmap(file: File): Bitmap? {
+        val bitmap = BitmapFactory.decodeFile(file.absolutePath) ?: return null
+        val rotation = readRotationDegrees(file)
+        if (rotation == 0f) return bitmap
+        val matrix = Matrix().apply { postRotate(rotation) }
+        return Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
+    }
+
+    private fun readRotationDegrees(file: File): Float {
+        val exif = ExifInterface(file.absolutePath)
+        return when (exif.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL)) {
+            ExifInterface.ORIENTATION_ROTATE_90 -> 90f
+            ExifInterface.ORIENTATION_ROTATE_180 -> 180f
+            ExifInterface.ORIENTATION_ROTATE_270 -> 270f
+            else -> 0f
+        }
+    }
+
+    private fun flashScreen() {
+        val flashView = binding.flashOverlay
+        flashView.clearAnimation()
+        flashView.alpha = 0f
+        flashView.visibility = View.VISIBLE
+        flashView.animate()
+            .alpha(0.5f)
+            .setDuration(60)
+            .withEndAction {
+                flashView.animate()
+                    .alpha(0f)
+                    .setDuration(140)
+                    .withEndAction {
+                        flashView.visibility = View.GONE
+                    }
+                    .start()
+            }
+            .start()
     }
 
     private fun uploadPhoto(file: File) {
