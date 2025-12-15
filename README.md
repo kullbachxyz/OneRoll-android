@@ -1,6 +1,6 @@
 # OneRoll Android
 
-Lightweight Android camera app for capturing photos after scanning a OneRoll QR configuration.
+Lightweight Android camera app for capturing photos after scanning a OneRoll QR configuration and uploading through the OneRoll Broker backend (no WebDAV credentials on-device).
 
 ## Build & Install
 - Debug APK: `GRADLE_USER_HOME=$(pwd)/.gradle ./gradlew --no-daemon assembleDebug`

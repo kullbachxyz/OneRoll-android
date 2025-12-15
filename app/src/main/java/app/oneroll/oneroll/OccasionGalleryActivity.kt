@@ -17,7 +17,7 @@ import app.oneroll.oneroll.storage.ConfigStorage
 import app.oneroll.oneroll.storage.OccasionPhotoRepository
 import app.oneroll.oneroll.ui.gallery.GridSpacingDecoration
 import app.oneroll.oneroll.ui.gallery.PhotoThumbnailAdapter
-import app.oneroll.oneroll.upload.WebDavDownloader
+import app.oneroll.oneroll.broker.BrokerDownloader
 import java.io.File
 
 class OccasionGalleryActivity : AppCompatActivity() {
@@ -25,7 +25,7 @@ class OccasionGalleryActivity : AppCompatActivity() {
     private lateinit var binding: ActivityGalleryBinding
     private val configStorage by lazy { ConfigStorage(this) }
     private val occasionRepository by lazy { OccasionPhotoRepository(this) }
-    private val webDavDownloader by lazy { WebDavDownloader(this) }
+    private val brokerDownloader by lazy { BrokerDownloader(this, configStorage) }
     private val adapter by lazy { PhotoThumbnailAdapter { _, index -> openPreview(index) } }
     private var photos: List<File> = emptyList()
     private var config: OneRollConfig? = null
@@ -60,12 +60,12 @@ class OccasionGalleryActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        webDavDownloader.shutdown()
+        brokerDownloader.shutdown()
     }
 
     private fun fetchOccasionPhotos(cfg: OneRollConfig) {
         setLoading(true)
-        webDavDownloader.syncOccasionPhotos(
+        brokerDownloader.syncOccasionPhotos(
             config = cfg,
             repository = occasionRepository,
             onProgress = { refreshPhotos() }

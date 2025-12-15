@@ -33,12 +33,12 @@ import androidx.core.view.WindowInsetsControllerCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.updateLayoutParams
 import app.oneroll.oneroll.databinding.ActivityCameraBinding
+import app.oneroll.oneroll.broker.BrokerDownloader
+import app.oneroll.oneroll.broker.BrokerUploader
 import app.oneroll.oneroll.model.OneRollConfig
 import app.oneroll.oneroll.storage.ConfigStorage
 import app.oneroll.oneroll.storage.OccasionPhotoRepository
 import app.oneroll.oneroll.storage.PhotoRepository
-import app.oneroll.oneroll.upload.WebDavDownloader
-import app.oneroll.oneroll.upload.WebDavUploader
 import java.io.File
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
@@ -56,8 +56,8 @@ class CameraActivity : AppCompatActivity() {
     private val configStorage by lazy { ConfigStorage(this) }
     private val occasionPhotoRepository by lazy { OccasionPhotoRepository(this) }
     private val photoRepository by lazy { PhotoRepository(this) }
-    private val webDavDownloader by lazy { WebDavDownloader(this) }
-    private val webDavUploader by lazy { WebDavUploader(this) }
+    private val brokerDownloader by lazy { BrokerDownloader(this, configStorage) }
+    private val brokerUploader by lazy { BrokerUploader(this, configStorage) }
     private var config: OneRollConfig? = null
     private var orientationListener: OrientationEventListener? = null
 
@@ -102,8 +102,8 @@ class CameraActivity : AppCompatActivity() {
     override fun onDestroy() {
         super.onDestroy()
         cameraExecutor.shutdown()
-        webDavUploader.shutdown()
-        webDavDownloader.shutdown()
+        brokerUploader.shutdown()
+        brokerDownloader.shutdown()
     }
 
     override fun onResume() {
@@ -269,7 +269,7 @@ class CameraActivity : AppCompatActivity() {
 
     private fun syncExistingPhotosFromServer() {
         val cfg = config ?: return
-        webDavDownloader.syncExistingPhotos(cfg, photoRepository) { result ->
+        brokerDownloader.syncExistingPhotos(cfg, photoRepository) { result ->
             result.onSuccess { downloaded ->
                 if (downloaded > 0) {
                     refreshGallery()
@@ -294,7 +294,10 @@ class CameraActivity : AppCompatActivity() {
 
     private fun showSettings() {
         val cfg = config ?: return
-        val redactedRaw = cfg.rawJson.replace(Regex("(\"password\"\\s*:\\s*\")[^\"]+(\")"), "$1******$2")
+        val redactedRaw = cfg.rawJson.replace(
+            Regex("(\"(inviteToken|uploadToken)\"\\s*:\\s*\")[^\"]+(\")"),
+            "$1******$3"
+        )
         val message = buildString {
             appendLine(cfg.occasionName)
             appendLine(getString(R.string.photos_count_label, photoRepository.listPhotos().size, cfg.maxPhotos))
@@ -486,9 +489,9 @@ class CameraActivity : AppCompatActivity() {
 
     private fun uploadPhoto(file: File) {
         val cfg = config ?: return
-        webDavUploader.uploadPhoto(file, cfg) { result ->
+        brokerUploader.uploadPhoto(file, cfg) { result ->
             result.onFailure { error ->
-                Log.e("CameraActivity", "WebDAV upload failed", error)
+                Log.e("CameraActivity", "Upload failed", error)
                 Toast.makeText(
                     this,
                     getString(R.string.upload_failed, error.localizedMessage ?: error.toString()),

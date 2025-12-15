@@ -1,32 +1,28 @@
-# OneRoll Anroid
+# OneRoll Android
 
-OneRoll is a lightweight camera app that guides guests through taking a limited number of photos and uploads them to your WebDAV storage.
+OneRoll guides guests through taking a limited number of photos and uploads them through the OneRoll Broker backend (no WebDAV credentials are ever shared with the app).
 
 ## How it works
 - On first launch the app prompts users to scan a configuration QR code.
-- The QR content must be a JSON payload that defines the event (occasion) and WebDAV credentials.
-- Photos are saved locally and uploaded to `baseURL + path + /<device-id>/filename.jpg`, keeping each device in its own subfolder.
+- The QR content must be a JSON payload that defines the occasion and points the app at a OneRoll Broker instance.
+- The app enrolls with the broker to mint a short-lived upload token, then uploads photos with a bearer `Authorization` header.
 
 ## Configuration QR code
 Generate a QR code that encodes JSON with these keys:
 
 ```json
 {
-  "occasionName": "Spring Gala 2024",
+  "occasionId": "spring-gala-2026",
+  "occasionName": "Spring Gala 2026",
   "maxPhotos": 36,
-  "webdav": {
-    "baseURL": "https://u12345.your-storagebox.de",
-    "path": "/one-roll/spring-gala",
-    "username": "webdav-user",
-    "password": "supersecret"
-  }
+  "brokerURL": "https://oneroll.example.com",
+  "inviteToken": "..."
 }
 ```
 
-Scan the QR with the in-app scanner to onboard the device. Use a QR generator that preserves the JSON exactly (UTF-8, no extra whitespace is required but is fine).
+Scan the QR with the in-app scanner to onboard the device. Use a QR generator that preserves the JSON exactly (UTF-8; whitespace is fine).
 
 ### Separating different occasions
-- Give each occasion its own `path` (e.g. `/one-roll/wedding-anna`, `/one-roll/wedding-bob`).
-- Ensure that `path` already exists on your WebDAV server; the app can only create per-device folders inside that path, not the root path itself.
-- The app automatically nests a per-device folder under that `path`, so devices sharing the same occasion stay grouped while still separated by device ID.
-- To start a new event, issue a new QR code with a different `path` value and (optionally) a new `occasionName`.
+- Use a unique `occasionId` per event; issue a new invite/QR for every new occasion.
+- The broker enforces per-device isolation; device IDs and uploads are scoped to the invite and the returned upload token.
+- To start a new event, mint a new invite from the broker (which yields a new `inviteToken`) and distribute the updated QR.
