@@ -28,10 +28,18 @@
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/prev_button"
-            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/prev" />
+            style="@style/Widget.MaterialComponents.Button.TextButton"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:minWidth="48dp"
+            android:minHeight="48dp"
+            android:contentDescription="@string/prev"
+            app:backgroundTint="@android:color/transparent"
+            app:icon="@drawable/ic_arrow_left"
+            app:iconPadding="0dp"
+            app:iconSize="28dp"
+            app:iconTint="@android:color/white"
+            app:strokeWidth="0dp" />
 
         <TextView
             android:id="@+id/counter"
@@ -42,10 +50,18 @@
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/next_button"
-            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/next" />
+            style="@style/Widget.MaterialComponents.Button.TextButton"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:minWidth="48dp"
+            android:minHeight="48dp"
+            android:contentDescription="@string/next"
+            app:backgroundTint="@android:color/transparent"
+            app:icon="@drawable/ic_arrow_right"
+            app:iconPadding="0dp"
+            app:iconSize="28dp"
+            app:iconTint="@android:color/white"
+            app:strokeWidth="0dp" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/close_button"
@@ -53,7 +69,9 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginStart="16dp"
-            android:text="@string/cancel" />
+            android:text="@string/cancel"
+            android:textColor="@android:color/black"
+            app:backgroundTint="@android:color/white" />
     </LinearLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

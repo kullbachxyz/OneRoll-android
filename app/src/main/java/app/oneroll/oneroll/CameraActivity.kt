@@ -104,7 +104,7 @@ class CameraActivity : AppCompatActivity() {
 
     private fun initUi() {
         val cfg = config ?: return
-        binding.occasionName.text = getString(R.string.occasion_label, cfg.occasionName)
+        binding.occasionName.text = cfg.occasionName
         binding.switchCamera.setOnClickListener {
             cameraSelector =
                 if (cameraSelector == CameraSelector.DEFAULT_BACK_CAMERA) CameraSelector.DEFAULT_FRONT_CAMERA else CameraSelector.DEFAULT_BACK_CAMERA
@@ -114,6 +114,7 @@ class CameraActivity : AppCompatActivity() {
         binding.captureButton.setOnClickListener { capturePhoto() }
         binding.settingsButton.setOnClickListener { showSettings() }
         binding.galleryButton.setOnClickListener { openGallery() }
+        updateFlashIcon(false)
 
         refreshGallery()
     }
@@ -175,6 +176,7 @@ class CameraActivity : AppCompatActivity() {
                     preview,
                     imageCapture
                 )
+                updateFlashIcon(false)
             } catch (exc: Exception) {
                 Log.e("CameraActivity", "Camera binding failed", exc)
                 Toast.makeText(this, "Camera failed: ${exc.localizedMessage}", Toast.LENGTH_LONG)
@@ -229,22 +231,24 @@ class CameraActivity : AppCompatActivity() {
     }
 
     private fun toggleFlash() {
-        val newState = !(camera?.cameraInfo?.torchState?.value == 1)
-        camera?.cameraControl?.enableTorch(newState)
-        binding.flashToggle.text = if (newState) {
-            getString(R.string.flash_on)
+        if (!::imageCapture.isInitialized) return
+        val newMode = if (imageCapture.flashMode == ImageCapture.FLASH_MODE_ON) {
+            ImageCapture.FLASH_MODE_OFF
         } else {
-            getString(R.string.flash_off)
+            ImageCapture.FLASH_MODE_ON
         }
+        imageCapture.flashMode = newMode
+        updateFlashIcon(newMode == ImageCapture.FLASH_MODE_ON)
     }
 
     private fun showSettings() {
         val cfg = config ?: return
+        val redactedRaw = cfg.rawJson.replace(Regex("(\"password\"\\s*:\\s*\")[^\"]+(\")"), "$1******$2")
         val message = buildString {
-            appendLine(getString(R.string.occasion_label, cfg.occasionName))
+            appendLine(cfg.occasionName)
             appendLine(getString(R.string.photos_count_label, photoRepository.listPhotos().size, cfg.maxPhotos))
             appendLine()
-            appendLine(getString(R.string.qr_raw_json, cfg.rawJson))
+            appendLine(getString(R.string.qr_raw_json, redactedRaw))
         }
         AlertDialog.Builder(this)
             .setTitle(R.string.settings_title)
@@ -286,4 +290,10 @@ class CameraActivity : AppCompatActivity() {
         preview.targetRotation = rotation
     }
 
+    private fun updateFlashIcon(isFlashOn: Boolean) {
+        val icon = if (isFlashOn) R.drawable.ic_flash_on else R.drawable.ic_flash_off
+        val desc = if (isFlashOn) R.string.flash_on else R.string.flash_off
+        binding.flashToggle.setIconResource(icon)
+        binding.flashToggle.contentDescription = getString(desc)
+    }
 }

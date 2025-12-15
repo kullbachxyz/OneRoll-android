@@ -49,11 +49,16 @@ class PhotoGalleryActivity : AppCompatActivity() {
         val baseBottom = binding.galleryList.paddingBottom
         val baseCloseBottom =
             (binding.closeButton.layoutParams as? ViewGroup.MarginLayoutParams)?.bottomMargin ?: 0
+        val baseTitleTop =
+            (binding.galleryTitle.layoutParams as? ViewGroup.MarginLayoutParams)?.topMargin ?: 0
 
         ViewCompat.setOnApplyWindowInsetsListener(binding.root) { _, insets ->
             val systemInsets = insets.getInsets(
                 WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout()
             )
+            binding.galleryTitle.updateLayoutParams<ViewGroup.MarginLayoutParams> {
+                topMargin = baseTitleTop + systemInsets.top
+            }
             binding.galleryList.setPadding(
                 binding.galleryList.paddingLeft,
                 baseTop + systemInsets.top,

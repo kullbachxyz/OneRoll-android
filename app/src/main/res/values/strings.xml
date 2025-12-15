@@ -16,11 +16,11 @@
     <string name="photos_cleared">Local photos cleared</string>
     <string name="config_cleared">Configuration cleared</string>
     <string name="max_reached">Maximum photos reached</string>
-    <string name="occasion_label">Occasion: %1$s</string>
     <string name="photos_count_label">%1$d / %2$d</string>
     <string name="qr_raw_json">QR payload:\n%1$s</string>
     <string name="open_gallery">Gallery</string>
     <string name="take_photo">Take</string>
     <string name="prev">Prev</string>
     <string name="next">Next</string>
+    <string name="gallery_title">Gallery</string>
 </resources>
