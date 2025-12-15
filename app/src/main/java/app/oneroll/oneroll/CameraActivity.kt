@@ -7,6 +7,7 @@ import android.os.Bundle
 import android.util.Log
 import android.view.Surface
 import android.view.OrientationEventListener
+import android.view.ScaleGestureDetector
 import android.view.ViewGroup
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
@@ -41,6 +42,7 @@ class CameraActivity : AppCompatActivity() {
     private lateinit var cameraExecutor: ExecutorService
     private var cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
     private var camera: Camera? = null
+    private val scaleGestureDetector by lazy { ScaleGestureDetector(this, ZoomGestureListener()) }
     private val configStorage by lazy { ConfigStorage(this) }
     private val photoRepository by lazy { PhotoRepository(this) }
     private val webDavUploader by lazy { WebDavUploader(this) }
@@ -118,6 +120,10 @@ class CameraActivity : AppCompatActivity() {
         binding.captureButton.setOnClickListener { capturePhoto() }
         binding.settingsButton.setOnClickListener { showSettings() }
         binding.galleryButton.setOnClickListener { openGallery() }
+        binding.previewView.setOnTouchListener { _, event ->
+            scaleGestureDetector.onTouchEvent(event)
+            true
+        }
         updateFlashIcon(false)
 
         refreshGallery()
@@ -313,6 +319,18 @@ class CameraActivity : AppCompatActivity() {
                     Toast.LENGTH_LONG
                 ).show()
             }
+        }
+    }
+
+    private inner class ZoomGestureListener :
+        ScaleGestureDetector.SimpleOnScaleGestureListener() {
+        override fun onScale(detector: ScaleGestureDetector): Boolean {
+            val currentCamera = camera ?: return false
+            val zoomState = currentCamera.cameraInfo.zoomState.value ?: return false
+            val newZoom = (zoomState.zoomRatio * detector.scaleFactor)
+                .coerceIn(zoomState.minZoomRatio, zoomState.maxZoomRatio)
+            currentCamera.cameraControl.setZoomRatio(newZoom)
+            return true
         }
     }
 }
