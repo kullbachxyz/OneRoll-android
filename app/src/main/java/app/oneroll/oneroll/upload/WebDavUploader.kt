@@ -3,7 +3,6 @@ package app.oneroll.oneroll.upload
 import android.content.Context
 import android.os.Handler
 import android.os.Looper
-import android.provider.Settings
 import android.util.Log
 import app.oneroll.oneroll.model.OneRollConfig
 import app.oneroll.oneroll.model.WebDavConfig
@@ -13,7 +12,6 @@ import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import okhttp3.Credentials
 import okhttp3.HttpUrl
-import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -24,9 +22,7 @@ class WebDavUploader(context: Context) {
     private val client = OkHttpClient()
     private val callbackHandler = Handler(Looper.getMainLooper())
     private val executor: ExecutorService = Executors.newSingleThreadExecutor()
-    private val deviceId: String =
-        Settings.Secure.getString(appContext.contentResolver, Settings.Secure.ANDROID_ID)
-            ?: "unknown-device"
+    private val deviceId: String = WebDavPaths.deviceId(appContext)
 
     fun uploadPhoto(
         file: File,
@@ -44,7 +40,7 @@ class WebDavUploader(context: Context) {
     }
 
     private fun uploadBlocking(file: File, webDav: WebDavConfig) {
-        val folderUrl = buildFolderUrl(webDav)
+        val folderUrl = WebDavPaths.buildDeviceFolderUrl(webDav, deviceId)
             ?: throw IllegalArgumentException("Invalid WebDAV base URL: ${webDav.baseURL}")
         val credential = Credentials.basic(webDav.username, webDav.password)
 
@@ -82,15 +78,6 @@ class WebDavUploader(context: Context) {
             }
             throw IOException("MKCOL failed with HTTP ${response.code}")
         }
-    }
-
-    private fun buildFolderUrl(webDav: WebDavConfig): HttpUrl? {
-        val base = webDav.baseURL.toHttpUrlOrNull() ?: return null
-        val cleanedSegments = webDav.path.trim('/').split('/').filter { it.isNotBlank() }
-        val builder = base.newBuilder().encodedPath("/")
-        cleanedSegments.forEach { segment -> builder.addPathSegment(segment) }
-        builder.addPathSegment(deviceId)
-        return builder.build()
     }
 
     companion object {

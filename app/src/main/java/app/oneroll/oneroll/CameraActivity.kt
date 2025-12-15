@@ -34,6 +34,7 @@ import app.oneroll.oneroll.databinding.ActivityCameraBinding
 import app.oneroll.oneroll.model.OneRollConfig
 import app.oneroll.oneroll.storage.ConfigStorage
 import app.oneroll.oneroll.storage.PhotoRepository
+import app.oneroll.oneroll.upload.WebDavDownloader
 import app.oneroll.oneroll.upload.WebDavUploader
 import java.io.File
 import java.util.concurrent.ExecutorService
@@ -50,6 +51,7 @@ class CameraActivity : AppCompatActivity() {
     private val scaleGestureDetector by lazy { ScaleGestureDetector(this, ZoomGestureListener()) }
     private val configStorage by lazy { ConfigStorage(this) }
     private val photoRepository by lazy { PhotoRepository(this) }
+    private val webDavDownloader by lazy { WebDavDownloader(this) }
     private val webDavUploader by lazy { WebDavUploader(this) }
     private var config: OneRollConfig? = null
     private var orientationListener: OrientationEventListener? = null
@@ -88,6 +90,7 @@ class CameraActivity : AppCompatActivity() {
             }
         }
         initUi()
+        syncExistingPhotosFromServer()
         checkPermissionAndStart()
     }
 
@@ -95,6 +98,7 @@ class CameraActivity : AppCompatActivity() {
         super.onDestroy()
         cameraExecutor.shutdown()
         webDavUploader.shutdown()
+        webDavDownloader.shutdown()
     }
 
     override fun onResume() {
@@ -247,6 +251,20 @@ class CameraActivity : AppCompatActivity() {
                 it.maxPhotos
             )
             binding.captureButton.isEnabled = photos.size < it.maxPhotos
+        }
+    }
+
+    private fun syncExistingPhotosFromServer() {
+        val cfg = config ?: return
+        webDavDownloader.syncExistingPhotos(cfg, photoRepository) { result ->
+            result.onSuccess { downloaded ->
+                if (downloaded > 0) {
+                    refreshGallery()
+                }
+            }
+            result.onFailure { error ->
+                Log.w("CameraActivity", "Failed to sync remote photos", error)
+            }
         }
     }
 

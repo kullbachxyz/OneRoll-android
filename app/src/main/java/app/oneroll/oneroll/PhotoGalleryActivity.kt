@@ -40,6 +40,12 @@ class PhotoGalleryActivity : AppCompatActivity() {
         binding.closeButton.setOnClickListener { finish() }
     }
 
+    override fun onResume() {
+        super.onResume()
+        photos = photoRepository.listPhotos()
+        adapter.submitList(photos)
+    }
+
     private fun openPreview(index: Int) {
         val paths = ArrayList(photos.map { it.absolutePath })
         val intent = Intent(this, PhotoPreviewActivity::class.java).apply {
